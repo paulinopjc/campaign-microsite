@@ -38,6 +38,18 @@
                     <label class="form-label">Ends At</label>
                     <input type="datetime-local" name="ends_at" class="form-control" value="<?= old('ends_at') ?>">
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Timezone</label>
+                    <select name="timezone" class="form-select">
+                        <?php
+                        $selected = old('timezone') ?: 'Asia/Manila';
+                        $timezones = DateTimeZone::listIdentifiers();
+                        foreach ($timezones as $tz):
+                        ?>
+                            <option value="<?= $tz ?>" <?= $tz === $selected ? 'selected' : '' ?>><?= $tz ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Thank You Message</label>

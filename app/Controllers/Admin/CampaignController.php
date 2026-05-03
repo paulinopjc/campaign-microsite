@@ -65,6 +65,7 @@ class CampaignController extends BaseController
             'thank_you_message' => $this->request->getPost('thank_you_message') ?: 'Thank you for your submission!',
             'starts_at' => $this->request->getPost('starts_at') ?: null,
             'ends_at' => $this->request->getPost('ends_at') ?: null,
+            'timezone' => $this->request->getPost('timezone') ?: 'UTC',
             'status' => 'draft',
         ];
 

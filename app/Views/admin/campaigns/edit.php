@@ -54,6 +54,18 @@
                     <input type="datetime-local" name="ends_at" class="form-control"
                            value="<?= $campaign['ends_at'] ? date('Y-m-d\TH:i', strtotime($campaign['ends_at'])) : '' ?>">
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Timezone</label>
+                    <select name="timezone" class="form-select">
+                        <?php
+                        $selected = $campaign['timezone'] ?? 'Asia/Manila';
+                        $timezones = DateTimeZone::listIdentifiers();
+                        foreach ($timezones as $tz):
+                        ?>
+                            <option value="<?= $tz ?>" <?= $tz === $selected ? 'selected' : '' ?>><?= $tz ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Thank You Message</label>
