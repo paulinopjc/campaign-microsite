@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ campaign.name }}</title>
+
+        <!-- OG Tags for social sharing -->
+        <meta property="og:title" content="{{ campaign.name }}">
+        <meta property="og:description" content="{{ campaign.description }}">
+        {% if branding.hero_image_url %}
+        <meta property="og:image" content="{{ branding.hero_image_url }}">
+        {% endif %}
+        <meta property="og:url" content="{{ share_url }}">
+        <meta property="og:type" content="website">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            :root {
+                --primary: {{ branding.primary_color | default('#0d6efd') }};
+                --bg: {{ branding.background_color | default('#ffffff') }};
+                --text: {{ branding.text_color | default('#333333') }};
+            }
+            body {
+                background-color: var(--bg);
+                color: var(--text);
+                font-family: {{ branding.font_family | default("'Inter', sans-serif") }};
+            }
+            .btn-primary {
+                background-color: var(--primary);
+                border-color: var(--primary);
+            }
+            .hero {
+                background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
+                            url('{{ branding.hero_image_url }}') center/cover no-repeat;
+                color: #fff;
+                padding: 80px 20px;
+                text-align: center;
+            }
+            .countdown {
+                font-size: 2rem;
+                font-weight: 700;
+                letter-spacing: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        {% if branding.logo_url %}
+        <div class="text-center py-3">
+            <img src="{{ branding.logo_url }}" alt="Logo" style="max-height: 60px;">
+        </div>
+        {% endif %}
+
+        {% if branding.hero_image_url %}
+        <div class="hero">
+            <h1 class="display-4 fw-bold">{{ campaign.name }}</h1>
+            {% if campaign.description %}
+            <p class="lead mt-3">{{ campaign.description }}</p>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="container py-5">
+            <h1 class="display-5 fw-bold text-center">{{ campaign.name }}</h1>
+            {% if campaign.description %}
+            <p class="lead text-center mt-3">{{ campaign.description }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if countdown_target %}
+        <div class="text-center py-4">
+            <p class="text-muted mb-1">Event starts in</p>
+            <div id="countdown" class="countdown" data-target="{{ countdown_target }}">--d --h --m --s</div>
+        </div>
+        {% endif %}
+
+        <div class="container py-4" style="max-width: 600px;">
+            <form action="/c/{{ campaign.slug }}/submit" method="POST" id="lead-form">
+                {% for field in fields %}
+                <div class="mb-3">
+                    <label class="form-label">
+                        {{ field.label }}
+                        {% if field.is_required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+
+                    {% if field.field_type == 'text' or field.field_type == 'email' or field.field_type == 'phone' or field.field_type == 'date' %}
+                    <input
+                        type="{{ field.field_type }}"
+                        name="field_{{ field.id }}"
+                        class="form-control"
+                        placeholder="{{ field.placeholder }}"
+                        {% if field.is_required %}required{% endif %}
+                    >
+
+                    {% elseif field.field_type == 'textarea' %}
+                    <textarea
+                        name="field_{{ field.id }}"
+                        class="form-control"
+                        rows="3"
+                        placeholder="{{ field.placeholder }}"
+                        {% if field.is_required %}required{% endif %}
+                    ></textarea>
+
+                    {% elseif field.field_type == 'dropdown' %}
+                    <select name="field_{{ field.id }}" class="form-select" {% if field.is_required %}required{% endif %}>
+                        <option value="">Select...</option>
+                        {% for option in field.options_parsed %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+
+                    {% elseif field.field_type == 'radio' %}
+                    {% for option in field.options_parsed %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="field_{{ field.id }}" value="{{ option }}" {% if field.is_required %}required{% endif %}>
+                        <label class="form-check-label">{{ option }}</label>
+                    </div>
+                    {% endfor %}
+
+                    {% elseif field.field_type == 'checkbox' %}
+                    {% for option in field.options_parsed %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="field_{{ field.id }}[]" value="{{ option }}">
+                        <label class="form-check-label">{{ option }}</label>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <!-- Hidden UTM fields -->
+                <input type="hidden" name="utm_source" id="utm_source">
+                <input type="hidden" name="utm_medium" id="utm_medium">
+                <input type="hidden" name="utm_campaign" id="utm_campaign">
+                <input type="hidden" name="utm_content" id="utm_content">
+                <input type="hidden" name="{{ csrf_name }}" value="{{ csrf_value }}">
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Submit</button>
+            </form>
+
+            <!-- Social sharing -->
+            <div class="text-center mt-4">
+                <p class="text-muted small">Share this campaign</p>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ share_url | url_encode }}" target="_blank" class="btn btn-outline-primary btn-sm me-1">Facebook</a>
+                <a href="https://twitter.com/intent/tweet?url={{ share_url | url_encode }}&text={{ campaign.name | url_encode }}" target="_blank" class="btn btn-outline-info btn-sm me-1">Twitter</a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ share_url | url_encode }}" target="_blank" class="btn btn-outline-secondary btn-sm">LinkedIn</a>
+            </div>
+        </div>
+
+        <script>
+            // Capture UTM params from URL
+            document.addEventListener('DOMContentLoaded', function() {
+                var params = new URLSearchParams(window.location.search);
+                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(function(key) {
+                    var el = document.getElementById(key);
+                    if (el) el.value = params.get(key) || '';
+                });
+
+                // Countdown timer
+                var countdownEl = document.getElementById('countdown');
+                if (countdownEl) {
+                    var target = new Date(countdownEl.dataset.target).getTime();
+                    setInterval(function() {
+                        var now = Date.now();
+                        var diff = target - now;
+                        if (diff <= 0) {
+                            countdownEl.textContent = 'Event has started!';
+                            return;
+                        }
+                        var d = Math.floor(diff / 86400000);
+                        var h = Math.floor((diff % 86400000) / 3600000);
+                        var m = Math.floor((diff % 3600000) / 60000);
+                        var s = Math.floor((diff % 60000) / 1000);
+                        countdownEl.textContent = d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
+                    }, 1000);
+                }
+            });
+        </script>
+    </body>
+</html>
