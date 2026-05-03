@@ -1,0 +1,35 @@
+FROM php:8.3-cli
+
+RUN apt-get update && apt-get install -y \
+    git curl libpng-dev libonig-dev libxml2-dev libpq-dev zip unzip libicu-dev
+
+RUN docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd intl
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY . .
+
+RUN composer install --no-dev --optimize-autoloader
+
+RUN mkdir -p public/uploads/logos public/uploads/heroes writable/cache/twig
+
+EXPOSE 10000
+
+CMD echo "CI_ENVIRONMENT = ${CI_ENVIRONMENT:-production}" > .env && \
+    echo "app.baseURL = ${APP_BASE_URL:-http://localhost:10000}" >> .env && \
+    echo "database.default.hostname = ${DB_HOST:-localhost}" >> .env && \
+    echo "database.default.database = ${DB_NAME:-campaign_microsite}" >> .env && \
+    echo "database.default.username = ${DB_USER:-postgres}" >> .env && \
+    echo "database.default.password = ${DB_PASS:-postgres}" >> .env && \
+    echo "database.default.DBDriver = Postgre" >> .env && \
+    echo "database.default.port = ${DB_PORT:-5432}" >> .env && \
+    echo "database.default.charset = utf8" >> .env && \
+    echo "GOOGLE_CLIENT_ID = ${GOOGLE_CLIENT_ID:-}" >> .env && \
+    echo "BREVO_API_KEY = ${BREVO_API_KEY:-}" >> .env && \
+    echo "email.fromEmail = ${EMAIL_FROM:-noreply@campaigns.test}" >> .env && \
+    echo "email.fromName = \"${EMAIL_FROM_NAME:-Campaign Platform}\"" >> .env && \
+    php spark migrate --all && \
+    php spark db:seed AdminSeeder && \
+    php spark serve --host 0.0.0.0 --port 10000
