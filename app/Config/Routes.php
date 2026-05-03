@@ -4,6 +4,8 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 
+$routes->get('/', 'Public\HomeController::index');
+
 // Auth
 $routes->get('login', 'Auth\LoginController::index');
 $routes->post('auth/google', 'Auth\LoginController::google');
