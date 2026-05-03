@@ -1,69 +1,174 @@
-# CodeIgniter 4 Application Starter
+# Campaign Microsite Builder
 
-## What is CodeIgniter?
+A multi-tenant campaign landing page builder built with CodeIgniter 4, Twig, and PostgreSQL. Campaign managers create branded microsites with custom forms, countdown timers, and UTM tracking through an admin panel. Public visitors see a branded page, fill out the form, and share on social media. All submissions are tracked with analytics.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## Tech Stack
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+| Layer | Technology |
+|-------|-----------|
+| Framework | CodeIgniter 4.7 |
+| Language | PHP 8.3+ |
+| Database | PostgreSQL 16 |
+| Templating | Twig 3 (public microsites) + CI4 views (admin) |
+| Auth | Google OAuth (whitelist-based, no self-registration) |
+| Frontend | Bootstrap 5 (admin), Twig templates (public) |
+| Testing | PHPUnit 10 (20 tests, 29 assertions) |
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## Features
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+- Create branded campaign microsites with custom colors, fonts, logos, and hero images
+- Dynamic form builder with 8 field types (text, email, phone, textarea, dropdown, checkbox, radio, date)
+- Twig-based template rendering for public-facing microsites
+- Countdown timer with configurable target date
+- Campaign scheduling with start/end dates
+- UTM parameter capture (source, medium, campaign, content) on page views and submissions
+- Campaign analytics dashboard (page views, submissions, conversion rate)
+- CSV export of form submissions
+- Social sharing buttons (Facebook, Twitter, LinkedIn)
+- Campaign lifecycle: draft, published, closed
+- Google OAuth login for admin (no password-based auth)
 
-## Installation & updates
+## Project Structure
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+```
+campaign-microsite/
+  app/
+    Controllers/
+      Admin/              # DashboardController, CampaignController
+      Auth/               # LoginController (Google OAuth)
+      Public/             # MicrositeController (public campaign pages)
+    Database/
+      Migrations/         # Users, Campaigns, CampaignFields, Submissions, PageViews
+      Seeds/              # AdminSeeder (paulinopjc@gmail.com)
+    Filters/              # AdminAuth (session-based auth guard)
+    Libraries/            # TwigRenderer (Twig environment setup)
+    Models/               # User, Campaign, CampaignField, Submission,
+                          # SubmissionValue, PageView
+    Views/
+      admin/              # Dashboard, campaign list, create/edit, submissions
+      auth/               # Google OAuth login page
+      layouts/            # Admin layout (navbar, sidebar)
+  templates/
+    default.twig          # Public microsite template (branding, form, countdown, sharing)
+  tests/
+    Feature/              # AdminAccessTest, MicrositeTest
+    Models/               # CampaignModelTest, SubmissionModelTest
+```
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+## Getting Started
 
-## Setup
+### Prerequisites
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+- PHP 8.3+ with extensions: intl, pgsql, pdo_pgsql, mbstring, curl
+- Composer
+- Docker Desktop (for PostgreSQL)
+- Google Cloud Console account (for OAuth Client ID)
 
-## Important Change with index.php
+### Setup
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+```bash
+git clone <repo-url>
+cd campaign-microsite
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+composer install
 
-**Please** read the user guide for a better explanation of how CI4 works!
+# Start PostgreSQL
+docker run -d --name searix_postgres -p 5433:5432 \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=searix_microsites \
+  postgres:16-alpine
 
-## Repository Management
+# Copy environment file and configure
+cp env .env
+```
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+Edit `.env`:
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+```
+CI_ENVIRONMENT = development
+app.baseURL = 'http://localhost:8082'
+database.default.hostname = localhost
+database.default.database = searix_microsites
+database.default.username = postgres
+database.default.password = postgres
+database.default.DBDriver = Postgre
+database.default.port = 5433
+database.default.charset = utf8
+GOOGLE_CLIENT_ID = your-google-client-id-here
+```
 
-## Server Requirements
+```bash
+# Run migrations and seed admin user
+php spark migrate
+php spark db:seed AdminSeeder
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+# Create upload directories
+mkdir -p public/uploads/logos public/uploads/heroes
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+# Start the dev server
+php -S localhost:8082 -t public
+```
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+Open `http://localhost:8082` in your browser.
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+### Google OAuth Setup
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Credentials
+2. Create an OAuth Client ID (Web application)
+3. Add `http://localhost:8082` to Authorized JavaScript origins
+4. Copy the Client ID into `.env` as `GOOGLE_CLIENT_ID`
+5. Go to OAuth consent screen > Test users and add your Google email
+
+### Run Tests
+
+```bash
+# Create test database (one-time)
+docker exec searix_postgres psql -U postgres -c "CREATE DATABASE campaign_microsite_test;"
+
+# Run tests
+php vendor/bin/phpunit
+```
+
+```
+OK (20 tests, 29 assertions)
+```
+
+## How It Works
+
+### Admin Flow
+
+1. Admin signs in with Google OAuth
+2. Creates a campaign with branding (colors, logo, hero), form fields, and dates
+3. Publishes the campaign to make it live at `/c/<slug>`
+4. Views submissions and analytics on the dashboard
+5. Exports submissions as CSV
+
+### Public Flow
+
+1. Visitor lands on `/c/<slug>` (with optional UTM parameters)
+2. Page view is recorded for analytics
+3. Visitor fills out the dynamic form
+4. Submission is saved with UTM tracking data
+5. Visitor sees thank you message and social sharing buttons
+
+### Campaign Branding
+
+Each campaign stores branding as JSON: primary color, background color, text color, font family, logo URL, and hero image URL. The Twig template renders these as CSS custom properties for consistent styling.
+
+### UTM Tracking
+
+Page views and submissions capture `utm_source`, `utm_medium`, `utm_campaign`, and `utm_content` from URL parameters. The dashboard shows conversion rate (submissions / page views) and the CSV export includes UTM data per submission.
+
+## Authentication
+
+Google OAuth with whitelist-based access. No email/password auth, no public registration.
+
+1. Admin user `paulinopjc@gmail.com` is seeded on first deploy
+2. Admins add new users directly to the database (name + email + role)
+3. Users sign in with Google; backend verifies the ID token and checks the email against the users table
+4. Only users in the database can sign in
+
+## License
+
+MIT
