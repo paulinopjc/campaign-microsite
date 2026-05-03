@@ -112,6 +112,72 @@ class CampaignController extends BaseController
         ]);
     }
 
+    public function update(int $id)
+    {
+        $model = new CampaignModel();
+        $campaign = $model->find($id);
+        if (!$campaign) return redirect()->to('/admin/campaigns');
+
+        $branding = json_decode($campaign['branding'], true) ?: [];
+        $branding['primary_color'] = $this->request->getPost('primary_color') ?: $branding['primary_color'] ?? '#0d6efd';
+        $branding['background_color'] = $this->request->getPost('background_color') ?: $branding['background_color'] ?? '#ffffff';
+        $branding['text_color'] = $this->request->getPost('text_color') ?: $branding['text_color'] ?? '#333333';
+        $branding['font_family'] = $this->request->getPost('font_family') ?: $branding['font_family'] ?? "'Inter', sans-serif";
+
+        // Handle logo upload
+        $logo = $this->request->getFile('logo');
+        if ($logo && $logo->isValid() && !$logo->hasMoved()) {
+            $newName = $logo->getRandomName();
+            $logo->move(FCPATH . 'uploads/logos', $newName);
+            $branding['logo_url'] = base_url('uploads/logos/' . $newName);
+        }
+
+        // Handle hero image upload
+        $hero = $this->request->getFile('hero_image');
+        if ($hero && $hero->isValid() && !$hero->hasMoved()) {
+            $newName = $hero->getRandomName();
+            $hero->move(FCPATH . 'uploads/heroes', $newName);
+            $branding['hero_image_url'] = base_url('uploads/heroes/' . $newName);
+        }
+
+        $model->update($id, [
+            'name' => $this->request->getPost('name'),
+            'slug' => url_title($this->request->getPost('name'), '-', true),
+            'description' => $this->request->getPost('description'),
+            'template' => $this->request->getPost('template') ?: 'default',
+            'branding' => json_encode($branding),
+            'countdown_target' => $this->request->getPost('countdown_target') ?: null,
+            'thank_you_message' => $this->request->getPost('thank_you_message') ?: 'Thank you for your submission!',
+            'starts_at' => $this->request->getPost('starts_at') ?: null,
+            'ends_at' => $this->request->getPost('ends_at') ?: null,
+            'timezone' => $this->request->getPost('timezone') ?: 'UTC',
+        ]);
+
+        // Update form fields: delete existing and re-insert
+        $fieldModel = new CampaignFieldModel();
+        $fieldModel->where('campaign_id', $id)->delete();
+
+        $labels = $this->request->getPost('field_label') ?? [];
+        foreach ($labels as $i => $label) {
+            if (empty($label)) continue;
+            $fieldModel->save([
+                'campaign_id' => $id,
+                'label' => $label,
+                'field_key' => url_title($label, '_', true),
+                'field_type' => ($this->request->getPost('field_type')[$i]) ?? 'text',
+                'is_required' => ($this->request->getPost('field_required')[$i]) ?? 0,
+                'placeholder' => ($this->request->getPost('field_placeholder')[$i]) ?? '',
+                'options' => !empty($this->request->getPost('field_options')[$i])
+                    ? json_encode(array_map('trim', explode(',', $this->request->getPost('field_options')[$i])))
+                    : null,
+                'sort_order' => $i,
+            ]);
+        }
+
+        return redirect()->to("/admin/campaigns/{$id}/edit")
+            ->with('success', 'Campaign updated');
+    }
+
     public function preview(int $id)
     {
         $model = new CampaignModel();
