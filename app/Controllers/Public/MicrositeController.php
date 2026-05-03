@@ -19,6 +19,10 @@ class MicrositeController extends BaseController
         $campaign = $model->getPublished($slug);
 
         if (!$campaign) {
+            if ($model->hasEnded($slug)) {
+                $ended = $model->getBySlug($slug);
+                return view('public/ended', ['campaign' => $ended]);
+            }
             throw PageNotFoundException::forPageNotFound();
         }
 

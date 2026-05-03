@@ -34,4 +34,31 @@ class CampaignModel extends Model
 
         return $campaign;
     }
+
+    public function hasEnded(string $slug): bool
+    {
+        $campaign = $this->where('slug', $slug)->where('status', 'published')->first();
+        if (!$campaign || !$campaign['ends_at']) return false;
+
+        $tz = new \DateTimeZone($campaign['timezone'] ?? 'UTC');
+        $now = (new \DateTime('now', $tz))->format('Y-m-d H:i:s');
+
+        return $campaign['ends_at'] < $now;
+    }
+
+    public function getActiveCampaigns(): array
+    {
+        $campaigns = $this->where('status', 'published')
+            ->orderBy('created_at', 'DESC')
+            ->findAll();
+
+        return array_filter($campaigns, function ($campaign) {
+            if (!$campaign['ends_at']) return true;
+
+            $tz = new \DateTimeZone($campaign['timezone'] ?? 'UTC');
+            $now = (new \DateTime('now', $tz))->format('Y-m-d H:i:s');
+
+            return $campaign['ends_at'] >= $now;
+        });
+    }
 }
